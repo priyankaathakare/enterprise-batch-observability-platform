@@ -7,7 +7,8 @@ st.set_page_config(page_title="Enterprise Batch", layout="wide")
 st.title("Enterprise Batch Observability Platform v2.0")
 st.success("Dashboard is LIVE! Connected!")
 
-API_URL = "http://127.0.0.1:8000"
+API_URL = "API_URL = "https://enterprise-batch-observability-platform.onrender.com""
+
 
 # Try API
 try:
