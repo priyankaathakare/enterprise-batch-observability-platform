@@ -1,57 +1,51 @@
 import streamlit as st
-import requests
 import pandas as pd
+import requests
 
-st.set_page_config(page_title="Enterprise Batch", layout="wide")
-
-st.title("Enterprise Batch Observability Platform v2.0")
-st.success("Dashboard is LIVE! Connected!")
+st.set_page_config(page_title="ABSA 10 Countries Monitor", layout="wide")
 
 API_URL = "https://enterprise-batch-observability-platform.onrender.com"
 
+st.title("🌍 ABSA Group - Batch Observability (10 Countries)")
+st.markdown("**South Africa | Botswana | Ghana | Kenya | Mauritius | Mozambique | Seychelles | Tanzania | Uganda | Zambia**")
 
-# Try API
 try:
-    response = requests.get(f"{API_URL}/api/v1/metrics", timeout=5)
-    if response.status_code == 200:
-        data = response.json()
-        st.success(f"API Connected: {API_URL}")
-    else:
-        raise Exception(f"Status {response.status_code}")
-except Exception as e:
-    st.warning("Using Demo Data - API offline")
-    st.info(f"Error: {e}")
-    st.info("Make sure Terminal 1 running: uvicorn app.api:app --host 0.0.0.0 --port 8000 --reload")
-    data = {"total_batches": 1247, "success_rate": 82.5, "failed_count": 99, "avg_duration": 145}
+    metrics = requests.get(f"{API_URL}/api/v1/metrics", timeout=10).json()
+    countries_data = requests.get(f"{API_URL}/api/v1/countries", timeout=10).json()
+    st.success("🟢 LIVE DATA - Connected to API")
+except:
+    st.warning("🟡 Demo Data - API offline, showing local data")
+    # fallback will be handled by API itself
+    metrics = {"total_jobs": 830, "success": 705, "failed": 83, "sla_breaches": 42, "total_cost_impact_usd": 1250000}
+    countries_data = []
 
-# Metrics
-col1, col2, col3, col4 = st.columns(4)
-col1.metric("Total Batches", data.get('total_batches', 1247))
-col2.metric("Success Rate", f"{data.get('success_rate', 82)}%")
-col3.metric("Failed", data.get('failed_count', 99))
-col4.metric("Avg Duration", f"{data.get('avg_duration', 145)}s")
-
-# Charts
-st.divider()
-col1, col2 = st.columns(2)
-
-with col1:
-    st.subheader("Batch Status")
-    chart_data = pd.DataFrame({"Status": ["Success", "Failed", "Running"], "Count": [1025, 99, 123]})
-    st.bar_chart(chart_data, x="Status", y="Count")
-
-with col2:
-    st.subheader("Performance")
-    st.line_chart([120, 135, 145, 130, 150, 145])
+# Top metrics
+col1, col2, col3, col4, col5 = st.columns(5)
+col1.metric("Total Jobs", metrics.get("total_jobs", 0))
+col2.metric("Success", metrics.get("success", 0))
+col3.metric("Failed", metrics.get("failed", 0), delta_color="inverse")
+col4.metric("SLA Breaches", metrics.get("sla_breaches", 0), delta_color="inverse")
+col5.metric("Cost Impact", f"${metrics.get('total_cost_impact_usd',0):,}")
 
 st.divider()
-st.subheader("Recent Batches")
-df = pd.DataFrame({
-    "Batch ID": ["B-1024", "B-1025", "B-1026", "B-1027"],
-    "Status": ["Success", "Failed", "Running", "Success"],
-    "Duration": ["124s", "340s", "89s", "156s"],
-    "Time": ["10:30 AM", "10:45 AM", "11:00 AM", "11:15 AM"]
-})
-st.dataframe(df, use_container_width=True)
 
-st.balloons()
+# Country filter
+if countries_data:
+    df_countries = pd.DataFrame(countries_data)
+    st.subheader("📊 Country-wise Performance")
+    st.bar_chart(df_countries.set_index("country")[["failed", "sla_breaches"]])
+
+    st.dataframe(df_countries, use_container_width=True)
+
+    # Country dropdown
+    selected = st.selectbox("Select Country for Details", df_countries['country'].tolist())
+    if selected:
+        try:
+            detail = requests.get(f"{API_URL}/api/v1/country/{selected}", timeout=10).json()
+            st.write(f"### Jobs in {selected}")
+            st.dataframe(pd.DataFrame(detail).head(20))
+        except:
+            pass
+
+st.divider()
+st.caption("ABSA Group Enterprise Monitoring | Built for 10 African Nations | Senior Project")
